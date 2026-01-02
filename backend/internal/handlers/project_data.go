@@ -102,7 +102,8 @@ func (h *ProjectDataHandler) PRs() fiber.Handler {
 		}
 
 		rows, err := h.db.Pool.Query(c.Context(), `
-SELECT github_pr_id, number, state, title, author_login, url, merged, updated_at_github, last_seen_at
+SELECT github_pr_id, number, state, title, author_login, url, merged, 
+       created_at_github, updated_at_github, closed_at_github, merged_at_github, last_seen_at
 FROM github_pull_requests
 WHERE project_id = $1
 ORDER BY COALESCE(updated_at_github, last_seen_at) DESC
@@ -119,21 +120,24 @@ LIMIT 50
 			var number int
 			var state, title, author, url string
 			var merged bool
-			var updated *time.Time
+			var createdAt, updated, closedAt, mergedAt *time.Time
 			var lastSeen time.Time
-			if err := rows.Scan(&gid, &number, &state, &title, &author, &url, &merged, &updated, &lastSeen); err != nil {
+			if err := rows.Scan(&gid, &number, &state, &title, &author, &url, &merged, &createdAt, &updated, &closedAt, &mergedAt, &lastSeen); err != nil {
 				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "prs_list_failed"})
 			}
 			out = append(out, fiber.Map{
-				"github_pr_id":  gid,
-				"number":        number,
-				"state":         state,
-				"title":         title,
-				"author_login":  author,
-				"url":           url,
-				"merged":        merged,
-				"updated_at":    updated,
-				"last_seen_at":  lastSeen,
+				"github_pr_id":    gid,
+				"number":          number,
+				"state":           state,
+				"title":           title,
+				"author_login":    author,
+				"url":             url,
+				"merged":          merged,
+				"created_at":       createdAt,
+				"updated_at":      updated,
+				"closed_at":       closedAt,
+				"merged_at":       mergedAt,
+				"last_seen_at":    lastSeen,
 			})
 		}
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{"prs": out})
