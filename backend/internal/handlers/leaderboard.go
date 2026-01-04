@@ -122,8 +122,13 @@ LIMIT $1
 				ecosystems = []string{}
 			}
 
+			// Calculate rank tier based on position
+			rankTier := GetRankTier(rank)
+
 			leaderboard = append(leaderboard, fiber.Map{
 				"rank":           rank,
+				"rank_tier":      string(rankTier),
+				"rank_tier_name": GetRankTierDisplayName(rankTier),
 				"username":       username,
 				"avatar":         avatar,
 				"user_id":        userID,

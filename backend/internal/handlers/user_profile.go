@@ -154,11 +154,81 @@ LIMIT 10
 			})
 		}
 
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		// Get user's rank position in leaderboard
+		// Use a more efficient query with CTE
+		var rankPosition *int
+		err = h.db.Pool.QueryRow(c.Context(), `
+WITH contribution_counts AS (
+  SELECT 
+    ga.login,
+    (
+      SELECT COUNT(*) 
+      FROM github_issues i
+      INNER JOIN projects p ON i.project_id = p.id
+      WHERE i.author_login = ga.login AND p.status = 'verified'
+    ) +
+    (
+      SELECT COUNT(*) 
+      FROM github_pull_requests pr
+      INNER JOIN projects p ON pr.project_id = p.id
+      WHERE pr.author_login = ga.login AND p.status = 'verified'
+    ) as contribution_count
+  FROM github_accounts ga
+  INNER JOIN users u ON ga.user_id = u.id
+  WHERE (
+    SELECT COUNT(*) 
+    FROM github_issues i
+    INNER JOIN projects p ON i.project_id = p.id
+    WHERE i.author_login = ga.login AND p.status = 'verified'
+  ) +
+  (
+    SELECT COUNT(*) 
+    FROM github_pull_requests pr
+    INNER JOIN projects p ON pr.project_id = p.id
+    WHERE pr.author_login = ga.login AND p.status = 'verified'
+  ) > 0
+),
+ranked_users AS (
+  SELECT 
+    login,
+    ROW_NUMBER() OVER (
+      ORDER BY contribution_count DESC, login ASC
+    ) as rank_position
+  FROM contribution_counts
+)
+SELECT rank_position
+FROM ranked_users
+WHERE login = $1
+`, *githubLogin).Scan(&rankPosition)
+
+		// Calculate rank tier
+		var rankTier RankTier
+		var rankTierName string
+		var rankTierColor string
+		if rankPosition != nil && *rankPosition > 0 {
+			rankTier = GetRankTier(*rankPosition)
+			rankTierName = GetRankTierDisplayName(rankTier)
+			rankTierColor = GetRankTierColor(rankTier)
+		} else {
+			// User has no contributions or not ranked
+			rankTier = RankBronze
+			rankTierName = GetRankTierDisplayName(rankTier)
+			rankTierColor = GetRankTierColor(rankTier)
+		}
+
+		response := fiber.Map{
 			"contributions_count": contributionsCount,
 			"languages":           languages,
 			"ecosystems":          ecosystems,
-		})
+			"rank": fiber.Map{
+				"position":     rankPosition,
+				"tier":         string(rankTier),
+				"tier_name":    rankTierName,
+				"tier_color":   rankTierColor,
+			},
+		}
+
+		return c.Status(fiber.StatusOK).JSON(response)
 	}
 }
 
