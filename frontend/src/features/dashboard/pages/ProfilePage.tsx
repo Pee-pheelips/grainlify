@@ -1915,15 +1915,6 @@ export function ProfilePage({
                           iconBgColor = prStyle.iconBgColor;
                           shadowColor = prStyle.shadowColor;
                           hoverShadowColor = prStyle.hoverShadow;
-
-                          // Create state badge for PRs
-                          prStateBadge = (
-                            <span
-                              className={`px-2 py-0.5 rounded-[6px] text-[11px] font-bold uppercase tracking-wide border ${prStyle.badgeColor} backdrop-blur-sm`}
-                            >
-                              {prStyle.badgeText}
-                            </span>
-                          );
                         } else if (item.type === "issue") {
                           IconComponent = Circle;
                           iconBgColor = "bg-[#c9983a]/50";
