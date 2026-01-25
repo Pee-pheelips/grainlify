@@ -23,7 +23,7 @@ export function NotificationsDropdown() {
         // setNotificationCount(data.count);
 
         // Mock data for testing - remove this when API is integrated
-        setNotificationCount(500); // Change to test: 0, 5, 99, 150
+        setNotificationCount(50); // Change to test: 0, 5, 99, 150
       } catch (error) {
         console.error("Failed to fetch notification count:", error);
       }
